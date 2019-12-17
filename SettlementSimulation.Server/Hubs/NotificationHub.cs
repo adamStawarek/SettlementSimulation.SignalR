@@ -21,13 +21,14 @@ namespace SettlementSimulation.Server.Hubs
             Console.WriteLine($"Client Id: {Context.ConnectionId} " +
                               $"Time Called: {DateTime.UtcNow:D}");
 
-            var colorMap = new Bitmap(request.ColorMap.Path);
+            
             var heightMap = new Bitmap(request.HeightMap.Path);
+            //var colorMap = new Bitmap(request.ColorMap.Path);
             //var colorMap = this.CopyDataToBitmap(request.ColorMap);
             //var heightMap = this.CopyDataToBitmap(request.HeightMap);
 
             var settlementInfo = await new SettlementBuilder()
-                .WithColorMap(colorMap)
+                //.WithColorMap(colorMap)
                 .WithHeightMap(heightMap)
                 .WithHeightRange(request.MinHeight, request.MaxHeight)
                 .BuildAsync();

@@ -28,10 +28,10 @@ namespace SettlementSimulation.Client
                 MaxHeight = 180,
                 MaxIterations = 100,
                 Breakpoints = new[] { 20, 40, 60 },
-                ColorMap = new Host.Common.Models.Dtos.BitmapDto()
-                {
-                  Path = @"C:\Users\adams\Desktop\SS.Data\colourmap.png"
-                },
+                //ColorMap = new Host.Common.Models.Dtos.BitmapDto()
+                //{
+                //  Path = @"C:\Users\adams\Desktop\SS.Data\colourmap.png"
+                //},
                 HeightMap = new Host.Common.Models.Dtos.BitmapDto()
                 {
                     Path = @"C:\Users\adams\Desktop\SS.Data\heightmap.png"
