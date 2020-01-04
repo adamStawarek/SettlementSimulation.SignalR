@@ -1,51 +1,71 @@
 ﻿using Microsoft.AspNet.SignalR;
 using SettlementSimulation.AreaGenerator;
 using SettlementSimulation.Engine;
-using SettlementSimulation.Engine.Models.Buildings;
-using SettlementSimulation.Engine.Models.Roads;
 using SettlementSimulation.Host.Common.Models;
 using SettlementSimulation.Host.Common.Models.Dtos;
 using System;
 using System.Drawing;
-using System.Drawing.Imaging;
 using System.Linq;
-using System.Runtime.InteropServices;
+using System.Reflection;
 using System.Threading.Tasks;
+using SettlementSimulation.AreaGenerator.Models;
+using SettlementSimulation.Engine.Models;
+using SettlementSimulation.Engine.Models.Buildings;
 
 namespace SettlementSimulation.Server.Hubs
 {
     public class NotificationHub : Hub
     {
+        public void GetSupportedBuildings()
+        {
+            var types = Assembly.Load("SettlementSimulation.Engine")
+                .GetTypes()
+                .Where(t => !t.IsAbstract && t.IsSubclassOf(typeof(Building)))
+                .Select(t => t.Name);
+
+            Clients.All.OnGetSupportedBuildingsResponse(types);
+        }
+
         public async Task RunSimulation(RunSimulationRequest request)
         {
             Console.WriteLine($"Client Id: {Context.ConnectionId} " +
                               $"Time Called: {DateTime.UtcNow:D}");
 
-            
-            var heightMap = new Bitmap(request.HeightMap.Path);
-            //var colorMap = new Bitmap(request.ColorMap.Path);
-            //var colorMap = this.CopyDataToBitmap(request.ColorMap);
-            //var heightMap = this.CopyDataToBitmap(request.HeightMap);
 
-            var settlementInfo = await new SettlementBuilder()
-                //.WithColorMap(colorMap)
-                .WithHeightMap(heightMap)
-                .WithHeightRange(request.MinHeight, request.MaxHeight)
-                .BuildAsync();
+            try
+            {
+                var heightMap = new Bitmap(request.HeightMap.Path);
 
-            var generator = new StructureGeneratorBuilder()
-                .WithMaxIterations(request.MaxIterations)
-                .WithBreakpoints(request.Breakpoints)
-                .WithFields(settlementInfo.Fields)
-                .WithMainRoad(settlementInfo.MainRoad)
-                .Build();
+                var settlementBuilder = new SettlementBuilder()
+                    .WithHeightMap(this.BitmapToPixelArray(heightMap))
+                    .WithHeightRange(request.MinHeight, request.MaxHeight);
 
-            generator.Breakpoint += OnSettlementStateUpdate;
-            generator.NextEpoch += OnSettlementStateUpdate;
-            generator.Finished += OnSettlementStateUpdate;
-            generator.Finished += OnFinished;
-            
-            generator.Start();
+                var settlementInfo = await settlementBuilder.BuildAsync();
+
+                var generator = new StructureGeneratorBuilder()
+                    .WithMaxIterations(request.MaxIterations)
+                    .WithBreakpointStep(request.BreakpointStep)
+                    .WithFields(settlementInfo.Fields)
+                    .WithMainRoad(settlementInfo.MainRoad)
+                    .Build();
+
+                generator.Breakpoint += OnSettlementStateUpdate;
+                generator.NextEpoch += OnSettlementStateUpdate;
+                generator.Finished += OnSettlementStateUpdate;
+                generator.Finished += OnFinished;
+
+                await generator.Start();
+            }
+            catch (Exception e)
+            {
+                var formattedException = $"Server exception at {nameof(NotificationHub)}.{nameof(RunSimulation)}:" +
+                                         $"\nMessage: {e.Message}," +
+                                         $"\nInner exception: {e.InnerException}," +
+                                         $"\nStackTrace: {e.StackTrace}";
+                Console.WriteLine(formattedException);
+                Clients.All.onException(formattedException);
+                throw;
+            }
         }
 
         private void OnFinished(object sender, EventArgs e)
@@ -56,47 +76,69 @@ namespace SettlementSimulation.Server.Hubs
         private void OnSettlementStateUpdate(object sender, EventArgs e)
         {
             var settlementState = ((StructureGenerator)sender).SettlementState;
-            
+
+            dynamic lastCreatedStructure = settlementState.StructureCreatedInLastGeneration;
+            if (lastCreatedStructure != null)
+            {
+                switch (lastCreatedStructure)
+                {
+                    case Road road:
+                        lastCreatedStructure = new RoadDto()
+                        {
+                            Type = road.GetType().Name,
+                            Locations = road.Segments
+                                .Select(p => new LocationDto(p.Position.X, p.Position.Y))
+                                .ToArray()
+                        };
+                        break;
+                    case Building building:
+                        lastCreatedStructure = new BuildingDto()
+                        {
+                            Type = building.GetType().Name,
+                            Location = new LocationDto(building.Position.X, building.Position.Y)
+                        };
+                        break;
+                }
+            }
+
             Clients.All.onSettlementStateUpdate(new RunSimulationResponse()
             {
                 CurrentEpoch = (int)settlementState.CurrentEpoch,
                 CurrentGeneration = settlementState.CurrentGeneration,
-                Buildings = settlementState.Structures
-                    .Where(b => b is Building)
-                    .Cast<Building>()
+                Buildings = settlementState.Roads
+                    .SelectMany(r => r.Buildings)
                     .Select(b => new BuildingDto()
                     {
                         Type = b.GetType().Name,
-                        Location = new LocationDto(b.Location.X, b.Location.Y)
+                        Location = new LocationDto(b.Position.X, b.Position.Y)
                     })
                     .ToArray(),
-                Roads = settlementState.Structures
-                    .Where(r => r is Road)
-                    .Cast<Road>()
+                Roads = settlementState.Roads
                     .Select(r => new RoadDto()
                     {
                         Type = r.GetType().Name,
-                        Locations = r.Points
-                            .Select(p => new LocationDto(p.X, p.Y))
+                        Locations = r.Segments
+                            .Select(p => new LocationDto(p.Position.X, p.Position.Y))
                             .ToArray()
                     })
                     .ToArray(),
+                LastGeneratedStructure = lastCreatedStructure
             });
         }
 
-        public Bitmap CopyDataToBitmap(int width, int height, byte[] data)
+        private Pixel[,] BitmapToPixelArray(Bitmap bitmap)
         {
-            var bmp = new Bitmap(width, height, PixelFormat.Format24bppRgb);
+            var pixels = new Pixel[bitmap.Width, bitmap.Height];
+            for (int i = 0; i < bitmap.Width; i++)
+            {
+                for (int j = 0; j < bitmap.Height; j++)
+                {
+                    var color = bitmap.GetPixel(i, j);
+                    pixels[i, j] = new Pixel(color.R, color.G, color.B);
+                }
+            }
 
-            var bmpData = bmp.LockBits(
-                new Rectangle(0, 0, bmp.Width, bmp.Height),
-                ImageLockMode.WriteOnly, bmp.PixelFormat);
-
-            Marshal.Copy(data, 0, bmpData.Scan0, data.Length);
-
-            bmp.UnlockBits(bmpData);
-
-            return bmp;
+            return pixels;
         }
     }
 }

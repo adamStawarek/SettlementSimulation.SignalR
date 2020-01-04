@@ -3,38 +3,25 @@ using SettlementSimulation.Host.Common.Models;
 using System;
 using System.Configuration;
 using System.Linq;
-using System.Net.Http;
-using System.Threading.Tasks;
 
 namespace SettlementSimulation.Client
 {
     class Program
     {
-        static async Task Main()
+        static void Main()
         {
-            Console.WriteLine("\tSupported buildings:");
-            var buildings = await GetSupportedBuildings();
-            buildings.ToList().ForEach(Console.WriteLine);
+            //uncomment to get all types of supported buildings
+            //GetSupportedBuildings(); 
 
-            Console.WriteLine("\tSupported roads:");
-            var roads = await GetSupportedRoads();
-            roads.ToList().ForEach(Console.WriteLine);
-
-            Console.WriteLine("\n\tPress enter to start signalR services");
-            Console.ReadLine();
-            RunSignalR(new RunSimulationRequest()
+            RunSimulation(new RunSimulationRequest()
             {
-                MinHeight = 100,
-                MaxHeight = 180,
-                MaxIterations = 100,
-                Breakpoints = new[] { 20, 40, 60 },
-                //ColorMap = new Host.Common.Models.Dtos.BitmapDto()
-                //{
-                //  Path = @"C:\Users\adams\Desktop\SS.Data\colourmap.png"
-                //},
+                MinHeight = 145,
+                MaxHeight = 170,
+                MaxIterations = 4000,
+                BreakpointStep = 5,
                 HeightMap = new Host.Common.Models.Dtos.BitmapDto()
                 {
-                    Path = @"C:\Users\adams\Desktop\SS.Data\heightmap.png"
+                    Path = @"C:\Users\adams\Desktop\SS.Data\hm.png"
                 }
             });
 
@@ -42,25 +29,29 @@ namespace SettlementSimulation.Client
             Console.ReadLine();
         }
 
-        static async Task<string[]> GetSupportedBuildings()
+        static void GetSupportedBuildings()
         {
-            var client = new HttpClient();
             var url = ConfigurationManager.AppSettings["SettlementSimulationUrl"];
-            var response = await client.GetAsync($"{url}/api/Simulation/GetBuildings");
+            var conn = new HubConnection(url);
+            var proxy = conn.CreateHubProxy("notificationHub");
 
-            return response.Content.ReadAsAsync<string[]>().Result;
+            try
+            {
+                conn.Start().Wait();
+                proxy.On<string[]>("OnGetSupportedBuildingsResponse", response =>
+                    {
+                        Console.WriteLine("Supported buildings:");
+                        response.ToList().ForEach(Console.WriteLine);
+                    });
+                proxy.Invoke("GetSupportedBuildings");
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine(e.Message);
+            }
         }
 
-        static async Task<string[]> GetSupportedRoads()
-        {
-            var client = new HttpClient();
-            var url = ConfigurationManager.AppSettings["SettlementSimulationUrl"];
-            var response = await client.GetAsync($"{url}/api/Simulation/GetRoads");
-
-            return response.Content.ReadAsAsync<string[]>().Result;
-        }
-
-        static void RunSignalR(RunSimulationRequest request)
+        static void RunSimulation(RunSimulationRequest request)
         {
             var url = ConfigurationManager.AppSettings["SettlementSimulationUrl"];
             var conn = new HubConnection(url);
@@ -76,6 +67,7 @@ namespace SettlementSimulation.Client
                     Console.WriteLine(response);
                 });
                 proxy.On<string>("OnFinished", Console.WriteLine);
+                proxy.On<string>("OnException", Console.WriteLine);
                 proxy.Invoke("RunSimulation", request);
             }
             catch (Exception e)
