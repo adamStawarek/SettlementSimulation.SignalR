@@ -11,6 +11,7 @@ using System.Reflection;
 using System.Threading.Tasks;
 using SettlementSimulation.AreaGenerator.Helpers;
 using SettlementSimulation.AreaGenerator.Models;
+using SettlementSimulation.AreaGenerator.Models.Terrains;
 using SettlementSimulation.Engine.Enumerators;
 using SettlementSimulation.Engine.Models;
 using SettlementSimulation.Engine.Models.Buildings;
@@ -61,7 +62,7 @@ namespace SettlementSimulation.Server.Hubs
 
                 var settlementBuilder = new SettlementBuilder()
                     .WithHeightMap(this.BitmapToPixelArray(heightMap))
-                    .WithHeightRange(request.MinHeight, request.MaxHeight);
+                    .WithHeightRange(new Sand().UpperBound, new Lowland().UpperBound);
 
                 var settlementInfo = await settlementBuilder.BuildAsync();
 

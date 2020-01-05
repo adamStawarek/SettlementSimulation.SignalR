@@ -22,8 +22,6 @@ namespace SettlementSimulation.Client
 
             RunSimulation(new RunSimulationRequest()
             {
-                MinHeight = 145,
-                MaxHeight = 170,
                 MaxIterations = 4000,
                 BreakpointStep = 5,
                 HeightMap = new BitmapDto()
