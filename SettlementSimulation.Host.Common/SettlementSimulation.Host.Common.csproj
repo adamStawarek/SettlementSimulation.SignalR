@@ -45,6 +45,7 @@
     <Compile Include="Models\Dtos\BuildingDto.cs" />
     <Compile Include="Models\Dtos\LocationDto.cs" />
     <Compile Include="Models\Dtos\RoadDto.cs" />
+    <Compile Include="Models\Dtos\TerrainDto.cs" />
     <Compile Include="Models\RunSimulationRequest.cs" />
     <Compile Include="Models\RunSimulationResponse.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />

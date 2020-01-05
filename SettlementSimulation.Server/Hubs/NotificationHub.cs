@@ -4,11 +4,14 @@ using SettlementSimulation.Engine;
 using SettlementSimulation.Host.Common.Models;
 using SettlementSimulation.Host.Common.Models.Dtos;
 using System;
+using System.Collections.Generic;
 using System.Drawing;
 using System.Linq;
 using System.Reflection;
 using System.Threading.Tasks;
+using SettlementSimulation.AreaGenerator.Helpers;
 using SettlementSimulation.AreaGenerator.Models;
+using SettlementSimulation.Engine.Enumerators;
 using SettlementSimulation.Engine.Models;
 using SettlementSimulation.Engine.Models.Buildings;
 
@@ -24,6 +27,26 @@ namespace SettlementSimulation.Server.Hubs
                 .Select(t => t.Name);
 
             Clients.All.OnGetSupportedBuildingsResponse(types);
+        }
+
+        public void GetSupportedRoads()
+        {
+            var types = Enum.GetValues(typeof(RoadType))
+                .Cast<RoadType>()
+                .Select(t => t.ToString());
+            Clients.All.OnGetSupportedRoadsResponse(types);
+        }
+
+        public void GetTerrains()
+        {
+            var terrainHelper = new TerrainHelper();
+            var terrains = terrainHelper.GetAllTerrains()
+                .Select(t => new TerrainDto()
+                {
+                    Type = t.GetType().Name,
+                    UpperHeightBound = t.UpperBound
+                });
+            Clients.All.OnGetTerrainsResponse(terrains);
         }
 
         public async Task RunSimulation(RunSimulationRequest request)
@@ -77,28 +100,41 @@ namespace SettlementSimulation.Server.Hubs
         {
             var settlementState = ((StructureGenerator)sender).SettlementState;
 
-            dynamic lastCreatedStructure = settlementState.StructureCreatedInLastGeneration;
-            if (lastCreatedStructure != null)
+            var lastCreatedStructures = settlementState.LastCreatedStructures.ToList();
+            var buildingsDtos = new List<BuildingDto>();
+            var roadDtos = new List<RoadDto>();
+            if (lastCreatedStructures.Any())
             {
-                switch (lastCreatedStructure)
+                lastCreatedStructures.ForEach(s =>
                 {
-                    case Road road:
-                        lastCreatedStructure = new RoadDto()
-                        {
-                            Type = road.GetType().Name,
-                            Locations = road.Segments
-                                .Select(p => new LocationDto(p.Position.X, p.Position.Y))
-                                .ToArray()
-                        };
-                        break;
-                    case Building building:
-                        lastCreatedStructure = new BuildingDto()
-                        {
-                            Type = building.GetType().Name,
-                            Location = new LocationDto(building.Position.X, building.Position.Y)
-                        };
-                        break;
-                }
+                    switch (s)
+                    {
+                        case Road road:
+                            roadDtos.Add(new RoadDto()
+                            {
+                                Type = road.Type.ToString(),
+                                Locations = road.Segments
+                                   .Select(p => new LocationDto(p.Position.X, p.Position.Y))
+                                   .ToArray()
+                            });
+
+                            road.Buildings.ForEach(b =>
+                                buildingsDtos.Add(new BuildingDto()
+                                {
+                                    Type = b.GetType().Name,
+                                    Location = new LocationDto(b.Position.X, b.Position.Y)
+                                }));
+                            break;
+                        case Building building:
+                            buildingsDtos.Add(new BuildingDto()
+                            {
+                                Type = building.GetType().Name,
+                                Location = new LocationDto(building.Position.X, building.Position.Y)
+                            });
+                            break;
+                    }
+                });
+
             }
 
             Clients.All.onSettlementStateUpdate(new RunSimulationResponse()
@@ -122,7 +158,8 @@ namespace SettlementSimulation.Server.Hubs
                             .ToArray()
                     })
                     .ToArray(),
-                LastGeneratedStructure = lastCreatedStructure
+                LastGeneratedBuildings = buildingsDtos.ToArray(),
+                LastGeneratedRoads = roadDtos.ToArray()
             });
         }
 

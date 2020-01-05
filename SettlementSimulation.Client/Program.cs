@@ -3,6 +3,8 @@ using SettlementSimulation.Host.Common.Models;
 using System;
 using System.Configuration;
 using System.Linq;
+using System.Threading;
+using SettlementSimulation.Host.Common.Models.Dtos;
 
 namespace SettlementSimulation.Client
 {
@@ -10,8 +12,13 @@ namespace SettlementSimulation.Client
     {
         static void Main()
         {
-            //uncomment to get all types of supported buildings
-            //GetSupportedBuildings(); 
+            ////uncomment to get all types of supported buildings
+            GetSupportedBuildings();
+            Thread.Sleep(500);
+            GetSupportedRoads();
+            Thread.Sleep(500);
+            GetTerrains();
+            Thread.Sleep(500);
 
             RunSimulation(new RunSimulationRequest()
             {
@@ -19,7 +26,7 @@ namespace SettlementSimulation.Client
                 MaxHeight = 170,
                 MaxIterations = 4000,
                 BreakpointStep = 5,
-                HeightMap = new Host.Common.Models.Dtos.BitmapDto()
+                HeightMap = new BitmapDto()
                 {
                     Path = @"C:\Users\adams\Desktop\SS.Data\hm.png"
                 }
@@ -40,10 +47,54 @@ namespace SettlementSimulation.Client
                 conn.Start().Wait();
                 proxy.On<string[]>("OnGetSupportedBuildingsResponse", response =>
                     {
-                        Console.WriteLine("Supported buildings:");
+                        Console.WriteLine("\nSupported buildings:");
                         response.ToList().ForEach(Console.WriteLine);
                     });
                 proxy.Invoke("GetSupportedBuildings");
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine(e.Message);
+            }
+        }
+
+        static void GetSupportedRoads()
+        {
+            var url = ConfigurationManager.AppSettings["SettlementSimulationUrl"];
+            var conn = new HubConnection(url);
+            var proxy = conn.CreateHubProxy("notificationHub");
+
+            try
+            {
+                conn.Start().Wait();
+                proxy.On<string[]>("OnGetSupportedRoadsResponse", response =>
+                {
+                    Console.WriteLine("\nSupported roads:");
+                    response.ToList().ForEach(Console.WriteLine);
+                });
+                proxy.Invoke("GetSupportedRoads");
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine(e.Message);
+            }
+        }
+
+        static void GetTerrains()
+        {
+            var url = ConfigurationManager.AppSettings["SettlementSimulationUrl"];
+            var conn = new HubConnection(url);
+            var proxy = conn.CreateHubProxy("notificationHub");
+
+            try
+            {
+                conn.Start().Wait();
+                proxy.On<TerrainDto[]>("OnGetTerrainsResponse", response =>
+                {
+                    Console.WriteLine("\nAll terrains:");
+                    response.ToList().ForEach(Console.WriteLine);
+                });
+                proxy.Invoke("GetTerrains");
             }
             catch (Exception e)
             {
