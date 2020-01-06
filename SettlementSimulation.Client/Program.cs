@@ -12,22 +12,23 @@ namespace SettlementSimulation.Client
     {
         static void Main()
         {
-            ////uncomment to get all types of supported buildings
+            var heightMap = new BitmapDto()
+            {
+                Path = @"C:\Users\adams\Desktop\SS.Data\hm.png"
+            };
+
             GetSupportedBuildings();
             Thread.Sleep(500);
             GetSupportedRoads();
             Thread.Sleep(500);
-            GetTerrains();
-            Thread.Sleep(500);
+            GetTerrains(heightMap);
+            Thread.Sleep(1500);
 
             RunSimulation(new RunSimulationRequest()
             {
                 MaxIterations = 4000,
                 BreakpointStep = 5,
-                HeightMap = new BitmapDto()
-                {
-                    Path = @"C:\Users\adams\Desktop\SS.Data\hm.png"
-                }
+                HeightMap = heightMap
             });
 
             Console.WriteLine("\n\tRunning simulation...");
@@ -78,7 +79,7 @@ namespace SettlementSimulation.Client
             }
         }
 
-        static void GetTerrains()
+        static void GetTerrains(BitmapDto model)
         {
             var url = ConfigurationManager.AppSettings["SettlementSimulationUrl"];
             var conn = new HubConnection(url);
@@ -92,7 +93,7 @@ namespace SettlementSimulation.Client
                     Console.WriteLine("\nAll terrains:");
                     response.ToList().ForEach(Console.WriteLine);
                 });
-                proxy.Invoke("GetTerrains");
+                proxy.Invoke("GetTerrains", model);
             }
             catch (Exception e)
             {

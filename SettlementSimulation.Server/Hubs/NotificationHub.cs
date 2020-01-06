@@ -38,9 +38,13 @@ namespace SettlementSimulation.Server.Hubs
             Clients.All.OnGetSupportedRoadsResponse(types);
         }
 
-        public void GetTerrains()
+        public void GetTerrains(BitmapDto model)
         {
+            var heightMap = new Bitmap(model.Path);
+            TerrainHelper.SetTerrains(BitmapToPixelArray(heightMap));
+
             var terrainHelper = new TerrainHelper();
+            
             var terrains = terrainHelper.GetAllTerrains()
                 .Select(t => new TerrainDto()
                 {
@@ -55,23 +59,23 @@ namespace SettlementSimulation.Server.Hubs
             Console.WriteLine($"Client Id: {Context.ConnectionId} " +
                               $"Time Called: {DateTime.UtcNow:D}");
 
-
             try
             {
                 var heightMap = new Bitmap(request.HeightMap.Path);
 
-                var settlementBuilder = new SettlementBuilder()
+                var settlementInfo = await new SettlementBuilder()
                     .WithHeightMap(this.BitmapToPixelArray(heightMap))
-                    .WithHeightRange(new Sand().UpperBound, new Lowland().UpperBound);
+                    .BuildAsync();
 
-                var settlementInfo = await settlementBuilder.BuildAsync();
-
+                Console.WriteLine("Start processing heightMap..");
                 var generator = new StructureGeneratorBuilder()
                     .WithMaxIterations(request.MaxIterations)
                     .WithBreakpointStep(request.BreakpointStep)
                     .WithFields(settlementInfo.Fields)
                     .WithMainRoad(settlementInfo.MainRoad)
                     .Build();
+                Console.WriteLine("Finished processing heightMap.");
+                Console.WriteLine("Start running simulation..");
 
                 generator.Breakpoint += OnSettlementStateUpdate;
                 generator.NextEpoch += OnSettlementStateUpdate;
@@ -94,12 +98,14 @@ namespace SettlementSimulation.Server.Hubs
 
         private void OnFinished(object sender, EventArgs e)
         {
+            Console.WriteLine("Simulation finished");
             Clients.All.onFinished($"Simulation finished at {DateTime.UtcNow:G}");
         }
 
         private void OnSettlementStateUpdate(object sender, EventArgs e)
         {
             var settlementState = ((StructureGenerator)sender).SettlementState;
+            Console.WriteLine($"Breakpoint: {settlementState.CurrentGeneration}");
 
             var lastCreatedStructures = settlementState.LastCreatedStructures.ToList();
             var buildingsDtos = new List<BuildingDto>();
@@ -142,6 +148,13 @@ namespace SettlementSimulation.Server.Hubs
             {
                 CurrentEpoch = (int)settlementState.CurrentEpoch,
                 CurrentGeneration = settlementState.CurrentGeneration,
+                MainRoad = new RoadDto()
+                {
+                    Type = settlementState.MainRoad.GetType().Name,
+                    Locations = settlementState.MainRoad.Segments
+                        .Select(p => new LocationDto(p.Position.X, p.Position.Y))
+                        .ToArray()
+                },
                 Buildings = settlementState.Roads
                     .SelectMany(r => r.Buildings)
                     .Select(b => new BuildingDto()

@@ -49,12 +49,18 @@ their upper height bound( ie lowland with
 UpperHeightBound = 170, and Sand with UpperHeightBound = 145, 
 means that all pixels from heightmap 
 with intenisities between 146 and 170 will be treated as Lowland 
-in further simulation)  
-Remark: only pixels that are classyfied as lowland will  be included
- in settlement area (to avoid setting min/max height)
+in further simulation).  
+These heights are comuted from heightmap so we have to provide
+path to it in BitmapDto model i.e:  
 ```csharp
 //in Program.cs
-  static void GetTerrains()
+ var heightMap = new BitmapDto()
+            {
+                Path = @"C:\heightmap.png"
+            };
+
+
+  static void GetTerrains(BitmapDto model)
         {
             var url = ConfigurationManager.AppSettings["SettlementSimulationUrl"];
             var conn = new HubConnection(url);
@@ -69,7 +75,7 @@ Remark: only pixels that are classyfied as lowland will  be included
                     response.ToList().ForEach(Console.WriteLine);
                     //do something
                 });
-                proxy.Invoke("GetTerrains");
+                proxy.Invoke("GetTerrains", model);
             }
             catch (Exception e)
             {
@@ -124,48 +130,38 @@ when sending RunSimulationRequest.
 
 Example output:
 ```
-Response at 05.01.2020 23:48:33
+Response at 06.01.2020 20:00:06
 CurrentEpoch: 2
-CurrentGeneration: 190
-Buildings: 1136
-Roads: 61
+MainRoad: Start: (X: 0, Y: 744), End: (X: 1024, Y: 647)
+CurrentGeneration: 305
+Buildings: 1532
+Roads: 106
 
 LastGeneratedRoads:
-Type: Unpaved 
+
+Type: Unpaved
 Locations:
-         (X: 363, Y: 352)
-         (X: 363, Y: 353)
-         (X: 363, Y: 354)
-         (X: 363, Y: 355)
-         (X: 363, Y: 356)
-         (X: 363, Y: 357)
-         (X: 363, Y: 358)
-         (X: 363, Y: 359)
-         (X: 363, Y: 360)
-         (X: 363, Y: 361)
-         (X: 363, Y: 362)
-         (X: 363, Y: 363)
-         (X: 363, Y: 364)
-         (X: 363, Y: 365)
-         (X: 363, Y: 366)
-         (X: 363, Y: 367)
-         (X: 363, Y: 368)
-         (X: 363, Y: 369)
-         (X: 363, Y: 370)
-         (X: 363, Y: 371)
-         (X: 363, Y: 374)
-         (X: 363, Y: 375)
+         (X: 393, Y: 438)
+         (X: 394, Y: 438)
+         (X: 395, Y: 438)
+         (X: 396, Y: 438)
+         (X: 397, Y: 438)
+         (X: 398, Y: 438)
+         (X: 399, Y: 438)
+         (X: 400, Y: 438)
+         (X: 401, Y: 438)
+         (X: 402, Y: 438)
+         (X: 403, Y: 438)
+         (X: 404, Y: 438)
+         (X: 405, Y: 438)
+         (X: 406, Y: 438)
 
 LastGeneratedBuildings:
-Type: Tavern Location: (X: 364, Y: 353)
-Type: Residence Location: (X: 362, Y: 353)
-Type: Residence Location: (X: 362, Y: 354)
-Type: Residence Location: (X: 362, Y: 355)
-Type: Residence Location: (X: 364, Y: 357)
-Type: Residence Location: (X: 364, Y: 361)
-Type: Residence Location: (X: 362, Y: 363)
-Type: Residence Location: (X: 362, Y: 364)
-Type: School Location: (X: 364, Y: 367)
-Type: Market Location: (X: 362, Y: 369)
-Type: Residence Location: (X: 364, Y: 371)
+Type: Residence Location: (X: 393, Y: 437)
+Type: Residence Location: (X: 395, Y: 439)
+Type: Residence Location: (X: 396, Y: 439)
+Type: Residence Location: (X: 397, Y: 437)
+Type: Residence Location: (X: 398, Y: 437)
+Type: Residence Location: (X: 399, Y: 437)
+Type: Market Location: (X: 404, Y: 439)
 ```
