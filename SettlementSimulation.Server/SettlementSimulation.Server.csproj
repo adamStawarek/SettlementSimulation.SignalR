@@ -63,11 +63,11 @@
     <Reference Include="RoyT.AStar, Version=2.1.0.0, Culture=neutral, processorArchitecture=MSIL">
       <HintPath>..\packages\RoyT.AStar.2.1.0\lib\netstandard1.0\RoyT.AStar.dll</HintPath>
     </Reference>
-    <Reference Include="SettlementSimulation.AreaGenerator, Version=1.2.3.0, Culture=neutral, processorArchitecture=MSIL">
-      <HintPath>..\packages\SettlementSimulation.AreaGenerator.1.2.3\lib\net462\SettlementSimulation.AreaGenerator.dll</HintPath>
+    <Reference Include="SettlementSimulation.AreaGenerator, Version=1.3.0.0, Culture=neutral, processorArchitecture=MSIL">
+      <HintPath>..\packages\SettlementSimulation.AreaGenerator.1.3.0\lib\net462\SettlementSimulation.AreaGenerator.dll</HintPath>
     </Reference>
-    <Reference Include="SettlementSimulation.Engine, Version=1.2.3.0, Culture=neutral, processorArchitecture=MSIL">
-      <HintPath>..\packages\SettlementSimulation.Engine.1.2.3\lib\net462\SettlementSimulation.Engine.dll</HintPath>
+    <Reference Include="SettlementSimulation.Engine, Version=1.3.0.0, Culture=neutral, processorArchitecture=MSIL">
+      <HintPath>..\packages\SettlementSimulation.Engine.1.3.0\lib\net462\SettlementSimulation.Engine.dll</HintPath>
     </Reference>
     <Reference Include="System" />
     <Reference Include="System.AppContext, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">

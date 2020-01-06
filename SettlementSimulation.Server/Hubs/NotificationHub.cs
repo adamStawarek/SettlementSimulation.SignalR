@@ -62,19 +62,21 @@ namespace SettlementSimulation.Server.Hubs
             try
             {
                 var heightMap = new Bitmap(request.HeightMap.Path);
-
+                
+                Console.WriteLine("Start processing heightMap..");
                 var settlementInfo = await new SettlementBuilder()
                     .WithHeightMap(this.BitmapToPixelArray(heightMap))
                     .BuildAsync();
 
-                Console.WriteLine("Start processing heightMap..");
+                Console.WriteLine("Finished processing heightMap.");
+
                 var generator = new StructureGeneratorBuilder()
                     .WithMaxIterations(request.MaxIterations)
                     .WithBreakpointStep(request.BreakpointStep)
                     .WithFields(settlementInfo.Fields)
                     .WithMainRoad(settlementInfo.MainRoad)
                     .Build();
-                Console.WriteLine("Finished processing heightMap.");
+               
                 Console.WriteLine("Start running simulation..");
 
                 generator.Breakpoint += OnSettlementStateUpdate;
@@ -107,10 +109,10 @@ namespace SettlementSimulation.Server.Hubs
             var settlementState = ((StructureGenerator)sender).SettlementState;
             Console.WriteLine($"Breakpoint: {settlementState.CurrentGeneration}");
 
-            var lastCreatedStructures = settlementState.LastCreatedStructures.ToList();
+            var lastCreatedStructures = settlementState.LastCreatedStructures?.ToList();
             var buildingsDtos = new List<BuildingDto>();
             var roadDtos = new List<RoadDto>();
-            if (lastCreatedStructures.Any())
+            if (lastCreatedStructures != null && lastCreatedStructures.Any())
             {
                 lastCreatedStructures.ForEach(s =>
                 {
