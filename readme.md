@@ -53,8 +53,8 @@ in further simulation).
 These heights are comuted from heightmap so we have to provide
 path to it in BitmapDto model i.e:  
 ```csharp
-//in Program.cs
- var heightMap = new BitmapDto()
+  //in Program.cs
+  var model = new BitmapDto()
             {
                 Path = @"C:\heightmap.png"
             };
