@@ -15,6 +15,8 @@ using SettlementSimulation.AreaGenerator.Models.Terrains;
 using SettlementSimulation.Engine.Enumerators;
 using SettlementSimulation.Engine.Models;
 using SettlementSimulation.Engine.Models.Buildings;
+using SettlementSimulation.Host.Common.Enumerators;
+using Direction = SettlementSimulation.Host.Common.Enumerators.Direction;
 
 namespace SettlementSimulation.Server.Hubs
 {
@@ -44,7 +46,7 @@ namespace SettlementSimulation.Server.Hubs
             TerrainHelper.SetTerrains(BitmapToPixelArray(heightMap));
 
             var terrainHelper = new TerrainHelper();
-            
+
             var terrains = terrainHelper.GetAllTerrains()
                 .Select(t => new TerrainDto()
                 {
@@ -62,7 +64,7 @@ namespace SettlementSimulation.Server.Hubs
             try
             {
                 var heightMap = new Bitmap(request.HeightMap.Path);
-                
+
                 Console.WriteLine("Start processing heightMap..");
                 var settlementInfo = await new SettlementBuilder()
                     .WithHeightMap(this.BitmapToPixelArray(heightMap))
@@ -76,7 +78,7 @@ namespace SettlementSimulation.Server.Hubs
                     .WithFields(settlementInfo.Fields)
                     .WithMainRoad(settlementInfo.MainRoad)
                     .Build();
-               
+
                 Console.WriteLine("Start running simulation..");
 
                 generator.Breakpoint += OnSettlementStateUpdate;
@@ -131,14 +133,16 @@ namespace SettlementSimulation.Server.Hubs
                                 buildingsDtos.Add(new BuildingDto()
                                 {
                                     Type = b.GetType().Name,
-                                    Location = new LocationDto(b.Position.X, b.Position.Y)
+                                    Location = new LocationDto(b.Position.X, b.Position.Y),
+                                    Direction = (Direction)Enum.Parse(typeof(Direction), b.Direction.ToString())
                                 }));
                             break;
                         case Building building:
                             buildingsDtos.Add(new BuildingDto()
                             {
                                 Type = building.GetType().Name,
-                                Location = new LocationDto(building.Position.X, building.Position.Y)
+                                Location = new LocationDto(building.Position.X, building.Position.Y),
+                                Direction = (Direction)Enum.Parse(typeof(Direction), building.Direction.ToString())
                             });
                             break;
                     }

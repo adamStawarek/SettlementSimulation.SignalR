@@ -2,6 +2,7 @@
 using SettlementSimulation.Host.Common.Models;
 using System;
 using System.Configuration;
+using System.IO;
 using System.Linq;
 using System.Threading;
 using SettlementSimulation.Host.Common.Models.Dtos;
@@ -14,7 +15,7 @@ namespace SettlementSimulation.Client
         {
             var heightMap = new BitmapDto()
             {
-                Path = @"C:\Users\adams\Desktop\SS.Data\hm.png"
+                Path = @"C:\Users\adams\Desktop\SS.Data\hm3.png"
             };
 
             GetSupportedBuildings();
@@ -26,8 +27,8 @@ namespace SettlementSimulation.Client
 
             RunSimulation(new RunSimulationRequest()
             {
-                MaxIterations = 4000,
-                BreakpointStep = 5,
+                MaxIterations = 1000,
+                BreakpointStep = 1,
                 HeightMap = heightMap
             });
 
@@ -103,6 +104,7 @@ namespace SettlementSimulation.Client
 
         static void RunSimulation(RunSimulationRequest request)
         {
+            File.Delete("logs.txt");
             var url = ConfigurationManager.AppSettings["SettlementSimulationUrl"];
             var conn = new HubConnection(url);
             var proxy = conn.CreateHubProxy("notificationHub");
@@ -114,6 +116,7 @@ namespace SettlementSimulation.Client
                 {
                     Console.Clear();
                     Console.WriteLine($"Response at {DateTime.UtcNow:G}");
+                    File.AppendAllText("logs.txt", response.ToString());
                     Console.WriteLine(response);
                 });
                 proxy.On<string>("OnFinished", Console.WriteLine);

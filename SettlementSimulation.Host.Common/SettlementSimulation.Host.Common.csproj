@@ -43,6 +43,7 @@
   <ItemGroup>
     <Compile Include="Models\Dtos\BitmapDto.cs" />
     <Compile Include="Models\Dtos\BuildingDto.cs" />
+    <Compile Include="Enumerators\Direction.cs" />
     <Compile Include="Models\Dtos\LocationDto.cs" />
     <Compile Include="Models\Dtos\RoadDto.cs" />
     <Compile Include="Models\Dtos\TerrainDto.cs" />
