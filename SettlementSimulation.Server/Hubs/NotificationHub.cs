@@ -17,6 +17,7 @@ using SettlementSimulation.Engine.Models;
 using SettlementSimulation.Engine.Models.Buildings;
 using SettlementSimulation.Host.Common.Enumerators;
 using Direction = SettlementSimulation.Host.Common.Enumerators.Direction;
+using System.IO;
 
 namespace SettlementSimulation.Server.Hubs
 {
@@ -58,6 +59,7 @@ namespace SettlementSimulation.Server.Hubs
 
         public async Task RunSimulation(RunSimulationRequest request)
         {
+            File.Delete("logs.txt");
             Console.WriteLine($"Client Id: {Context.ConnectionId} " +
                               $"Time Called: {DateTime.UtcNow:D}");
 
@@ -149,8 +151,8 @@ namespace SettlementSimulation.Server.Hubs
                 });
 
             }
-
-            Clients.All.onSettlementStateUpdate(new RunSimulationResponse()
+            
+            var response = new RunSimulationResponse()
             {
                 CurrentEpoch = (int)settlementState.CurrentEpoch,
                 CurrentGeneration = settlementState.CurrentGeneration,
@@ -180,7 +182,9 @@ namespace SettlementSimulation.Server.Hubs
                     .ToArray(),
                 LastGeneratedBuildings = buildingsDtos.ToArray(),
                 LastGeneratedRoads = roadDtos.ToArray()
-            });
+            };
+            File.AppendAllText("logs.txt", response.ToString());
+            Clients.All.onSettlementStateUpdate(response);
         }
 
         private Pixel[,] BitmapToPixelArray(Bitmap bitmap)

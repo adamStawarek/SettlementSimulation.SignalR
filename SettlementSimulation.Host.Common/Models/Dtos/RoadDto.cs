@@ -9,8 +9,7 @@ namespace SettlementSimulation.Host.Common.Models.Dtos
         public override string ToString()
         {
             return $"{nameof(Type)}: {Type} " +
-                   $"{nameof(Locations)}: \n" +
-                   $"{Locations.Aggregate("", (l1, l2) => l1 + "\n\t " + l2, r => r.ToString())} ";
+                   $"Start: {Locations.First()}, End: {Locations.Last()}";
         }
     }
 }

@@ -103,8 +103,7 @@ namespace SettlementSimulation.Client
         }
 
         static void RunSimulation(RunSimulationRequest request)
-        {
-            File.Delete("logs.txt");
+        {          
             var url = ConfigurationManager.AppSettings["SettlementSimulationUrl"];
             var conn = new HubConnection(url);
             var proxy = conn.CreateHubProxy("notificationHub");
@@ -115,8 +114,7 @@ namespace SettlementSimulation.Client
                 proxy.On<RunSimulationResponse>("OnSettlementStateUpdate", response =>
                 {
                     Console.Clear();
-                    Console.WriteLine($"Response at {DateTime.UtcNow:G}");
-                    File.AppendAllText("logs.txt", response.ToString());
+                    Console.WriteLine($"Response at {DateTime.UtcNow:G}");                    
                     Console.WriteLine(response);
                 });
                 proxy.On<string>("OnFinished", Console.WriteLine);

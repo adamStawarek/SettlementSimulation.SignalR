@@ -10,14 +10,14 @@ namespace SettlementSimulation.Host.Common.Models
         public BuildingDto[] Buildings { get; set; }
         public RoadDto MainRoad { get; set; }
         public RoadDto[] Roads { get; set; }
-        public RoadDto[] LastGeneratedRoads{ get; set; }
-        public BuildingDto[] LastGeneratedBuildings{ get; set; }
+        public RoadDto[] LastGeneratedRoads { get; set; }
+        public BuildingDto[] LastGeneratedBuildings { get; set; }
 
         public override string ToString()
         {
-            return $"{nameof(CurrentEpoch)}: {CurrentEpoch} \n" +
+            return $"\n\n {nameof(CurrentGeneration)}: {CurrentGeneration}\n" +
                    $"{nameof(MainRoad)}: Start: {MainRoad.Locations.First()}, End: {MainRoad.Locations.Last()}  \n" +
-                   $"{nameof(CurrentGeneration)}: {CurrentGeneration} \n" +
+                   $"{nameof(CurrentEpoch)}: {CurrentEpoch}  \n" +
                    $"{nameof(Buildings)}: {Buildings.Count()} \n" +
                    $"{nameof(Roads)}: {Roads.Count()} \n" +
                    $"\n{nameof(LastGeneratedRoads)}: \n" +
