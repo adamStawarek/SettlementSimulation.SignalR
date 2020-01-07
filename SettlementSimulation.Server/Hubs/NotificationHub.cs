@@ -149,7 +149,6 @@ namespace SettlementSimulation.Server.Hubs
                             break;
                     }
                 });
-
             }
             
             var response = new RunSimulationResponse()
