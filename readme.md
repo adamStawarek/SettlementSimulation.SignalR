@@ -124,8 +124,11 @@ Type: MountainTop UpperHeightBound: 255
 ```
 LastGeneratedRoads and LastGeneratedBuildings from 
 RunSimulationResponse are collection of structures 
-created in last generetion. So to follow simulation 
-state one may need to set BreakpointStep to 1
+created in last generetion.  
+LastUpdatedBuildings LastUpdatedRoads are structures that changed it's type i.e  
+Residence to Tavern or UnpavedRoad to PavedRoad.
+There is also property LastRemovedBuildings containg structrues removed in mutation like flood or earthquake.
+So to follow simulation state one may need to set BreakpointStep to 1
 when sending RunSimulationRequest.  
 
 Example output:
@@ -164,4 +167,9 @@ Type: Residence Location: (X: 397, Y: 437)
 Type: Residence Location: (X: 398, Y: 437)
 Type: Residence Location: (X: 399, Y: 437)
 Type: Market Location: (X: 404, Y: 439)
+
+LastUpdatedBuildings: 0,
+LastUpdatedRoads: 0,
+LastRemovedBuildings: 0,
+
 ```

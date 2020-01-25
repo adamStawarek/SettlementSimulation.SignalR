@@ -15,7 +15,7 @@ namespace SettlementSimulation.Client
         {
             var heightMap = new BitmapDto()
             {
-                Path = @"C:\Users\adams\Desktop\SS.Data\hm3.png"
+                Path = @"C:\Users\adams\Desktop\SS.Data\hm5.png"
             };
 
             GetSupportedBuildings();
@@ -27,7 +27,7 @@ namespace SettlementSimulation.Client
 
             RunSimulation(new RunSimulationRequest()
             {
-                MaxIterations = 1000,
+                MaxIterations = 600,
                 BreakpointStep = 1,
                 HeightMap = heightMap
             });

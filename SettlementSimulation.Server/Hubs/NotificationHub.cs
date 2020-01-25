@@ -83,6 +83,7 @@ namespace SettlementSimulation.Server.Hubs
 
                 Console.WriteLine("Start running simulation..");
 
+                generator.Initialized += OnSettlementStateUpdate;
                 generator.Breakpoint += OnSettlementStateUpdate;
                 generator.NextEpoch += OnSettlementStateUpdate;
                 generator.Finished += OnSettlementStateUpdate;
@@ -113,44 +114,104 @@ namespace SettlementSimulation.Server.Hubs
             var settlementState = ((StructureGenerator)sender).SettlementState;
             Console.WriteLine($"Breakpoint: {settlementState.CurrentGeneration}");
 
-            var lastCreatedStructures = settlementState.LastCreatedStructures?.ToList();
             var buildingsDtos = new List<BuildingDto>();
             var roadDtos = new List<RoadDto>();
-            if (lastCreatedStructures != null && lastCreatedStructures.Any())
-            {
-                lastCreatedStructures.ForEach(s =>
-                {
-                    switch (s)
-                    {
-                        case Road road:
-                            roadDtos.Add(new RoadDto()
-                            {
-                                Type = road.Type.ToString(),
-                                Locations = road.Segments
-                                   .Select(p => new LocationDto(p.Position.X, p.Position.Y))
-                                   .ToArray()
-                            });
+            var updatedBuildingsDtos = new List<Tuple<BuildingDto, BuildingDto>>();
+            var updatedRoadDtos = new List<Tuple<RoadDto, RoadDto>>();
+            var removedBuildingsDtos = new List<BuildingDto>();
 
-                            road.Buildings.ForEach(b =>
-                                buildingsDtos.Add(new BuildingDto()
-                                {
-                                    Type = b.GetType().Name,
-                                    Location = new LocationDto(b.Position.X, b.Position.Y),
-                                    Direction = (Direction)Enum.Parse(typeof(Direction), b.Direction.ToString())
-                                }));
-                            break;
-                        case Building building:
+            var settlementUpdate = settlementState.LastSettlementUpdate;
+            switch (settlementUpdate.UpdateType)
+            {
+                case UpdateType.NewRoads:
+                    settlementUpdate.NewRoads.ForEach(road =>
+                    {
+                        roadDtos.Add(new RoadDto()
+                        {
+                            Type = road.Type.ToString(),
+                            Locations = road.Segments
+                                .Select(p => new LocationDto(p.Position.X, p.Position.Y))
+                                .ToArray()
+                        });
+                        road.Buildings.ForEach(b =>
                             buildingsDtos.Add(new BuildingDto()
                             {
-                                Type = building.GetType().Name,
-                                Location = new LocationDto(building.Position.X, building.Position.Y),
-                                Direction = (Direction)Enum.Parse(typeof(Direction), building.Direction.ToString())
-                            });
-                            break;
-                    }
-                });
+                                Type = b.GetType().Name,
+                                Location = new LocationDto(b.Position.X, b.Position.Y),
+                                Direction = (Direction)Enum.Parse(typeof(Direction), b.Direction.ToString())
+                            }));
+                    });
+                    break;
+                case UpdateType.NewBuildings:
+                    settlementUpdate.NewBuildings.ForEach(building =>
+                    {
+                        buildingsDtos.Add(new BuildingDto()
+                        {
+                            Type = building.GetType().Name,
+                            Location = new LocationDto(building.Position.X, building.Position.Y),
+                            Direction = (Direction)Enum.Parse(typeof(Direction), building.Direction.ToString())
+                        });
+                    });
+                    break;
+
+                case UpdateType.NewTypes:
+                    settlementUpdate.UpdatedBuildings.ForEach(tuple =>
+                    {
+                        var oldBDto = new BuildingDto()
+                        {
+                            Type = tuple.oldBuilding.GetType().Name,
+                            Location = new LocationDto(tuple.oldBuilding.Position.X, tuple.oldBuilding.Position.Y),
+                            Direction = (Direction)Enum.Parse(typeof(Direction), tuple.oldBuilding.Direction.ToString())
+                        };
+                        var newBDto = new BuildingDto()
+                        {
+                            Type = tuple.newBuilding.GetType().Name,
+                            Location = new LocationDto(tuple.newBuilding.Position.X, tuple.newBuilding.Position.Y),
+                            Direction = (Direction)Enum.Parse(typeof(Direction), tuple.newBuilding.Direction.ToString())
+                        };
+                        updatedBuildingsDtos.Add(new Tuple<BuildingDto, BuildingDto>(oldBDto, newBDto));
+                    });
+                    settlementUpdate.UpdatedRoads.ForEach(tuple =>
+                    {
+                        var oldRDto = new RoadDto()
+                        {
+                            Type = tuple.oldRoad.Type.ToString(),
+                            Locations = tuple.oldRoad.Segments
+                                .Select(p => new LocationDto(p.Position.X, p.Position.Y))
+                                .ToArray()
+                        };
+                        var newRDto = new RoadDto()
+                        {
+                            Type = tuple.newRoad.Type.ToString(),
+                            Locations = tuple.newRoad.Segments
+                                .Select(p => new LocationDto(p.Position.X, p.Position.Y))
+                                .ToArray()
+                        };
+                        updatedRoadDtos.Add(new Tuple<RoadDto, RoadDto>(oldRDto, newRDto));
+                    });
+                    break;
             }
-            
+
+            settlementUpdate.FloodMutationResult?.RemovedBuildings.ForEach(building =>
+            {
+                removedBuildingsDtos.Add(new BuildingDto()
+                {
+                    Type = building.GetType().Name,
+                    Location = new LocationDto(building.Position.X, building.Position.Y),
+                    Direction = (Direction)Enum.Parse(typeof(Direction), building.Direction.ToString())
+                });
+            });
+
+            settlementUpdate.EarthquakeMutationResult?.RemovedBuildings.ForEach(building =>
+            {
+                removedBuildingsDtos.Add(new BuildingDto()
+                {
+                    Type = building.GetType().Name,
+                    Location = new LocationDto(building.Position.X, building.Position.Y),
+                    Direction = (Direction)Enum.Parse(typeof(Direction), building.Direction.ToString())
+                });
+            });
+
             var response = new RunSimulationResponse()
             {
                 CurrentEpoch = (int)settlementState.CurrentEpoch,
@@ -180,7 +241,10 @@ namespace SettlementSimulation.Server.Hubs
                     })
                     .ToArray(),
                 LastGeneratedBuildings = buildingsDtos.ToArray(),
-                LastGeneratedRoads = roadDtos.ToArray()
+                LastGeneratedRoads = roadDtos.ToArray(),
+                LastUpdatedBuildings = updatedBuildingsDtos.ToArray(),
+                LastUpdatedRoads = updatedRoadDtos.ToArray(),
+                LastRemovedBuildings = removedBuildingsDtos.ToArray()
             };
             File.AppendAllText("logs.txt", response.ToString());
             Clients.All.onSettlementStateUpdate(response);
