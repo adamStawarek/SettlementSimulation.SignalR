@@ -41,6 +41,7 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Enumerators\Material.cs" />
     <Compile Include="Models\Dtos\BitmapDto.cs" />
     <Compile Include="Models\Dtos\BuildingDto.cs" />
     <Compile Include="Enumerators\Direction.cs" />

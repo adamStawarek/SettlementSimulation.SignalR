@@ -18,6 +18,8 @@ using SettlementSimulation.Engine.Models.Buildings;
 using SettlementSimulation.Host.Common.Enumerators;
 using Direction = SettlementSimulation.Host.Common.Enumerators.Direction;
 using System.IO;
+using SettlementSimulation.Engine.Interfaces;
+using Material = SettlementSimulation.Host.Common.Enumerators.Material;
 
 namespace SettlementSimulation.Server.Hubs
 {
@@ -112,7 +114,7 @@ namespace SettlementSimulation.Server.Hubs
         private void OnSettlementStateUpdate(object sender, EventArgs e)
         {
             var settlementState = ((StructureGenerator)sender).SettlementState;
-            Console.WriteLine($"Breakpoint: {settlementState.CurrentGeneration}");
+            Console.WriteLine($"Breakpoint: {settlementState.CurrentIteration}");
 
             var buildingsDtos = new List<BuildingDto>();
             var roadDtos = new List<RoadDto>();
@@ -121,124 +123,56 @@ namespace SettlementSimulation.Server.Hubs
             var removedBuildingsDtos = new List<BuildingDto>();
 
             var settlementUpdate = settlementState.LastSettlementUpdate;
-            switch (settlementUpdate.UpdateType)
-            {
-                case UpdateType.NewRoads:
-                    settlementUpdate.NewRoads.ForEach(road =>
-                    {
-                        roadDtos.Add(new RoadDto()
-                        {
-                            Type = road.Type.ToString(),
-                            Locations = road.Segments
-                                .Select(p => new LocationDto(p.Position.X, p.Position.Y))
-                                .ToArray()
-                        });
-                        road.Buildings.ForEach(b =>
-                            buildingsDtos.Add(new BuildingDto()
-                            {
-                                Type = b.GetType().Name,
-                                Location = new LocationDto(b.Position.X, b.Position.Y),
-                                Direction = (Direction)Enum.Parse(typeof(Direction), b.Direction.ToString())
-                            }));
-                    });
-                    break;
-                case UpdateType.NewBuildings:
-                    settlementUpdate.NewBuildings.ForEach(building =>
-                    {
-                        buildingsDtos.Add(new BuildingDto()
-                        {
-                            Type = building.GetType().Name,
-                            Location = new LocationDto(building.Position.X, building.Position.Y),
-                            Direction = (Direction)Enum.Parse(typeof(Direction), building.Direction.ToString())
-                        });
-                    });
-                    break;
 
-                case UpdateType.NewTypes:
-                    settlementUpdate.UpdatedBuildings.ForEach(tuple =>
-                    {
-                        var oldBDto = new BuildingDto()
-                        {
-                            Type = tuple.oldBuilding.GetType().Name,
-                            Location = new LocationDto(tuple.oldBuilding.Position.X, tuple.oldBuilding.Position.Y),
-                            Direction = (Direction)Enum.Parse(typeof(Direction), tuple.oldBuilding.Direction.ToString())
-                        };
-                        var newBDto = new BuildingDto()
-                        {
-                            Type = tuple.newBuilding.GetType().Name,
-                            Location = new LocationDto(tuple.newBuilding.Position.X, tuple.newBuilding.Position.Y),
-                            Direction = (Direction)Enum.Parse(typeof(Direction), tuple.newBuilding.Direction.ToString())
-                        };
-                        updatedBuildingsDtos.Add(new Tuple<BuildingDto, BuildingDto>(oldBDto, newBDto));
-                    });
-                    settlementUpdate.UpdatedRoads.ForEach(tuple =>
-                    {
-                        var oldRDto = new RoadDto()
-                        {
-                            Type = tuple.oldRoad.Type.ToString(),
-                            Locations = tuple.oldRoad.Segments
-                                .Select(p => new LocationDto(p.Position.X, p.Position.Y))
-                                .ToArray()
-                        };
-                        var newRDto = new RoadDto()
-                        {
-                            Type = tuple.newRoad.Type.ToString(),
-                            Locations = tuple.newRoad.Segments
-                                .Select(p => new LocationDto(p.Position.X, p.Position.Y))
-                                .ToArray()
-                        };
-                        updatedRoadDtos.Add(new Tuple<RoadDto, RoadDto>(oldRDto, newRDto));
-                    });
-                    break;
-            }
-
-            settlementUpdate.FloodMutationResult?.RemovedBuildings.ForEach(building =>
+            settlementUpdate.NewRoads.ForEach(road =>
             {
-                removedBuildingsDtos.Add(new BuildingDto()
-                {
-                    Type = building.GetType().Name,
-                    Location = new LocationDto(building.Position.X, building.Position.Y),
-                    Direction = (Direction)Enum.Parse(typeof(Direction), building.Direction.ToString())
-                });
+                roadDtos.Add(ConvertToRoadDto(road));
+                road.Buildings.ForEach(b =>
+                    buildingsDtos.Add(this.ConvertToBuildingDto(b)));
+            });
+            settlementUpdate.NewBuildings.ForEach(b =>
+            {
+                buildingsDtos.Add(this.ConvertToBuildingDto(b));
+            });
+            settlementUpdate.UpdatedBuildings.ForEach(tuple =>
+            {
+                var oldBDto = this.ConvertToBuildingDto(tuple.oldBuilding);
+                var newBDto = this.ConvertToBuildingDto(tuple.newBuilding);
+                updatedBuildingsDtos.Add(new Tuple<BuildingDto, BuildingDto>(oldBDto, newBDto));
+            });
+            settlementUpdate.UpdatedRoads.ForEach(tuple =>
+            {
+                var oldRDto = ConvertToRoadDto(tuple.oldRoad);
+                var newRDto = ConvertToRoadDto(tuple.newRoad);
+                updatedRoadDtos.Add(new Tuple<RoadDto, RoadDto>(oldRDto, newRDto));
             });
 
-            settlementUpdate.EarthquakeMutationResult?.RemovedBuildings.ForEach(building =>
+            settlementUpdate.FloodMutationResult?.RemovedBuildings.ForEach(b =>
             {
-                removedBuildingsDtos.Add(new BuildingDto()
-                {
-                    Type = building.GetType().Name,
-                    Location = new LocationDto(building.Position.X, building.Position.Y),
-                    Direction = (Direction)Enum.Parse(typeof(Direction), building.Direction.ToString())
-                });
+                removedBuildingsDtos.Add(ConvertToBuildingDto(b));
+            });
+
+            settlementUpdate.EarthquakeMutationResult?.RemovedBuildings.ForEach(b =>
+            {
+                removedBuildingsDtos.Add(ConvertToBuildingDto(b));
             });
 
             var response = new RunSimulationResponse()
             {
                 CurrentEpoch = (int)settlementState.CurrentEpoch,
-                CurrentGeneration = settlementState.CurrentGeneration,
+                CurrentGeneration = settlementState.CurrentIteration,
                 MainRoad = new RoadDto()
                 {
-                    Type = settlementState.MainRoad.GetType().Name,
                     Locations = settlementState.MainRoad.Segments
                         .Select(p => new LocationDto(p.Position.X, p.Position.Y))
                         .ToArray()
                 },
                 Buildings = settlementState.Roads
                     .SelectMany(r => r.Buildings)
-                    .Select(b => new BuildingDto()
-                    {
-                        Type = b.GetType().Name,
-                        Location = new LocationDto(b.Position.X, b.Position.Y)
-                    })
+                    .Select(ConvertToBuildingDto)
                     .ToArray(),
                 Roads = settlementState.Roads
-                    .Select(r => new RoadDto()
-                    {
-                        Type = r.GetType().Name,
-                        Locations = r.Segments
-                            .Select(p => new LocationDto(p.Position.X, p.Position.Y))
-                            .ToArray()
-                    })
+                    .Select(ConvertToRoadDto)
                     .ToArray(),
                 LastGeneratedBuildings = buildingsDtos.ToArray(),
                 LastGeneratedRoads = roadDtos.ToArray(),
@@ -248,6 +182,28 @@ namespace SettlementSimulation.Server.Hubs
             };
             File.AppendAllText("logs.txt", response.ToString());
             Clients.All.onSettlementStateUpdate(response);
+        }
+
+        private BuildingDto ConvertToBuildingDto(IBuilding building)
+        {
+            return new BuildingDto()
+            {
+                Type = building.GetType().Name,
+                Location = new LocationDto(building.Position.X, building.Position.Y),
+                Direction = (Direction)Enum.Parse(typeof(Direction), building.Direction.ToString()),
+                Material = (Material)Enum.Parse(typeof(Material), building.Material.Value.ToString())
+            };
+        }
+
+        private RoadDto ConvertToRoadDto(IRoad road)
+        {
+            return new RoadDto()
+            {
+                Type = road.Type.ToString(),
+                Locations = road.Segments
+                    .Select(p => new LocationDto(p.Position.X, p.Position.Y))
+                    .ToArray()
+            };
         }
 
         private Pixel[,] BitmapToPixelArray(Bitmap bitmap)

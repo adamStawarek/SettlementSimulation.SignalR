@@ -7,6 +7,7 @@ namespace SettlementSimulation.Host.Common.Models.Dtos
         public string Type { get; set; }
         public LocationDto Location { get; set; }
         public Direction Direction { get; set; }
+        public Material Material { get; set; }
 
         public override string ToString()
         {
